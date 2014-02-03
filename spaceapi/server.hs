@@ -64,6 +64,7 @@ getStatusIconR = do
     Nothing ->
         sendResponseStatus status404 ()
 
+-- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
 main = do
   app <- App <$>
