@@ -31,10 +31,8 @@ int main (void)
     //  Socket to talk to clients
     void *context = zmq_ctx_new();
     void *responder = zmq_socket(context, ZMQ_REP);
-#ifdef ZMQ_IPV6
-    int ipv6 = 1;
-    zmq_setsockopt(responder, ZMQ_IPV6, &ipv6, sizeof(int));
-#endif
+    int ipv4only = 0;
+    zmq_setsockopt(responder, ZMQ_IPV4ONLY, &ipv4only, sizeof(int));
     int rc = zmq_bind(responder, "tcp://*:5555");
     assert(rc == 0);
 
