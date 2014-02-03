@@ -21,8 +21,8 @@ data Status = Status {
       stLastChange :: Integer
     } deriving (Show)
 
-isOn :: Status -> Bool
-isOn status =
+isOpen :: Status -> Bool
+isOpen status =
     case stState status of
       On -> True
       Full -> True
