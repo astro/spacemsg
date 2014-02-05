@@ -13,11 +13,13 @@ import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status302, status404)
 
 import qualified HQSwitch as Sw
+import qualified Sensors as Sensors
 
 -- TODO: .cabal
 data App = App {
       appJSON :: Object,
-      appSwitch :: IO Sw.Status
+      appSwitch :: IO Sw.Status,
+      appSensors :: IO Sensors.Status
     }
 
 mkYesod "App" [parseRoutes|
@@ -30,8 +32,9 @@ instance Yesod App where
 
 getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
-  App { appJSON = obj, appSwitch = sw } <- getYesod
+  App { appJSON = obj, appSwitch = sw, appSensors = se } <- getYesod
   swSt <- liftIO sw
+  seSt <- liftIO se
   let stateObj =
           fromMaybe [] $
           HM.lookup "state" obj >>=
@@ -42,7 +45,15 @@ getSpaceApiR = do
             "message" .= Sw.stMessage swSt,
             "lastchange" .= Sw.stLastChange swSt
           ] ++ stateObj
-      obj' = HM.insert "state" stateObj' obj
+      sensorsObj =
+          object $
+          maybe [] (\value ->
+                     [ "temperature" .= value ]
+                   ) $
+          Sensors.stState seSt
+      obj' = HM.insert "state" stateObj' $
+             HM.insert "sensors" sensorsObj $
+             obj
   return $ RepJson $ toContent $ Object obj'
 
 getStatusIconR :: Handler ()
@@ -71,5 +82,6 @@ main = do
          fromMaybe (error "Cannot load spaceapi.json") <$>
          decode <$>
          LBC.readFile "spaceapi.json" <*>
-         Sw.start
+         Sw.start <*>
+         Sensors.start
   warp 3000 app
