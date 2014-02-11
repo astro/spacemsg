@@ -10,10 +10,11 @@ import Data.Text (Text)
 import System.Time
 import Control.Concurrent.STM
 import qualified Data.Aeson as JSON
+import qualified Data.HashMap.Strict as HM
 
 
 data Status = Status {
-      stState :: Maybe [(Text, JSON.Value)],
+      stState :: Maybe (HM.HashMap Text JSON.Value),
       stLastUpdate :: Integer,
       stInterval :: Int
     } deriving (Show)

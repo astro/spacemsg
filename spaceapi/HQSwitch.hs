@@ -2,7 +2,6 @@ module HQSwitch where
 
 import Control.Monad
 import Data.Monoid
-import Data.String
 import System.ZMQ3.Monadic hiding (Off, On)
 import Control.Concurrent
 import qualified Data.ByteString as B

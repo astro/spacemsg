@@ -33,6 +33,8 @@ instance Yesod App where
 
 getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
+  addHeader "Access-Control-Allow-Origin" "*"
+  
   App { appJSON = obj, appSwitch = sw, appSensors = se } <- getYesod
   swSt <- liftIO sw
   seSt <- liftIO se
@@ -56,7 +58,7 @@ getSpaceApiR = do
                        ]
               
           in Sensors.stState seSt >>=
-             lookup key >>=
+             HM.lookup key >>=
              return . sensorObj
       sensorsObj =
           object $
