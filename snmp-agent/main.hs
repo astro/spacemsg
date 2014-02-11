@@ -6,8 +6,8 @@ import Control.Applicative
 import Control.Monad.Trans.Reader
 import Control.Monad.IO.Class
 import Network.Protocol.NetSNMP
-import qualified Data.ByteString as B
-import qualified Data.Text as T
+import qualified Data.ByteString.Char8 as BC
+import Data.Text.Encoding (decodeUtf8)
 import Data.Maybe
 import Data.Aeson ((.=))
 import qualified Data.Aeson as JSON
@@ -20,8 +20,8 @@ type SrcT a = ReaderT Src IO a
 src :: RawOID -> SrcT (Maybe SnmpResult)
 src oid = ask >>= \f -> liftIO $ f oid
 
-getExt :: [(B.ByteString, T.Text, T.Text)] -> SrcT [JSON.Value]
-getExt config = do
+getExt :: SrcT [(BC.ByteString, JSON.Value)]
+getExt = do
   let collect i j = do
         mResult <- src $ extOid ++ [i, j]
         case mResult of
@@ -38,20 +38,13 @@ getExt config = do
         mapMaybe (\nameValue ->
                    case nameValue of
                      (OctetString name _, value) ->
-                       Just (name, value)
+                       Just (name, asnValueToJSON value)
                      _ ->
                        Nothing
                  ) $
         zip names values
 
-  return $
-    flip mapMaybe config $ \(name, name', unit) ->
-    do value <- name `lookup` namesValues
-       return $ JSON.object
-         [ "name" .= JSON.toJSON name',
-           "value" .= asnValueToJSON value,
-           "unit" .= JSON.toJSON unit
-         ]
+  return namesValues
   
   where extOid :: RawOID
         extOid = [1, 3, 6, 1, 4, 1, 2021, 8, 1]
@@ -64,23 +57,16 @@ main =
     bind rep "tcp://*:5555"
     forever $ do
       _ <- receive rep
-      objs <- liftIO $ run config
+      liftIO $ putStrLn "recvd, running"
+      objs <- liftIO $ run ["dogbert.hq.c3d2.de", "ratbert.hq.c3d2.de"]
+      liftIO $ putStrLn $ "got " ++ show objs
       send' rep [] $ JSON.encode $ JSON.toJSON objs
   
-  where config =
-          [ ("dogbert.hq.c3d2.de", getExt [ ("wlan0-stations", "dogbert 2.4 GHz", "WiFi stations")
-                                          , ("wlan1-stations", "dogbert 5 GHz", "WiFi stations")
-                                          , ("wlan1-1-stations", "dogbert 5 GHz extra", "WiFi stations")
-                                          ])
-          , ("ratbert.hq.c3d2.de", getExt [ ("wlan0-stations", "ratbert 2.4 GHz", "WiFi stations")
-                                          ])
-          ]
-
-run :: [(B.ByteString, SrcT [JSON.Value])] -> IO [JSON.Value]
-run config = do
+run :: [BC.ByteString] -> IO JSON.Value
+run hosts = do
   initialize
-  let src :: B.ByteString -> Src
-      src host oid =
+  let src' :: BC.ByteString -> Src
+      src' host oid =
         snmpGet snmp_version_1 host snmpCommunity oid >>=
         either (\e -> do
                    putStrLn e
@@ -90,9 +76,13 @@ run config = do
       snmpCommunity :: Community
       snmpCommunity = "public"
 
-  foldM (\objs (host, action) ->
-          (++ objs) <$> runReaderT action (src host)
-        ) [] config
+  JSON.object <$>
+    foldM (\obj host -> do
+              obj' <- map (\(k, v) ->
+                            decodeUtf8 (BC.concat [host, ":", k]) .= v
+                          ) <$> runReaderT getExt (src' host)
+              return $ obj ++ obj'
+        ) [] hosts
 
 
 asnValueToJSON :: ASNValue -> JSON.Value
@@ -107,5 +97,3 @@ asnValueToJSON (Boolean b) = JSON.toJSON b
 asnValueToJSON (IEEEFloat f) = JSON.toJSON f
 asnValueToJSON (IEEEDouble d) = JSON.toJSON d
 asnValueToJSON Null = JSON.Null
-
-

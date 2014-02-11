@@ -2,18 +2,18 @@ module Sensors where
 
 import Control.Monad
 import Data.Monoid
-import Data.String
 import System.ZMQ3.Monadic hiding (Off, On)
 import Control.Concurrent
-import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as LB
+import Data.Text (Text)
 import System.Time
 import Control.Concurrent.STM
 import qualified Data.Aeson as JSON
 
 
 data Status = Status {
-      stState :: Maybe JSON.Value,
+      stState :: Maybe [(Text, JSON.Value)],
       stLastUpdate :: Integer,
       stInterval :: Int
     } deriving (Show)
@@ -28,7 +28,7 @@ run tStatus =
         send req [] mempty
         liftIO $ putStrLn "sent to sensors"
         reply <- receive req
-        liftIO $ putStrLn $ "reply from sensors" ++ show reply
+        liftIO $ putStrLn $ "reply from sensors" ++ BC.unpack reply
 
         let mValue = JSON.decode $ LB.fromChunks [reply]
 

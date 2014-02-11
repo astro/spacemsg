@@ -8,7 +8,8 @@ import Control.Applicative
 import Yesod
 import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
-import Data.HashMap.Strict as HM
+import Data.Text (Text)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status302, status404)
 
@@ -45,12 +46,32 @@ getSpaceApiR = do
             "message" .= Sw.stMessage swSt,
             "lastchange" .= Sw.stLastChange swSt
           ] ++ stateObj
+      mkSensor :: Text -> Text -> Text -> Text -> Maybe Value
+      mkSensor key name unit description =
+          let sensorObj value =
+                object [ "name" .= name
+                       , "value" .= value
+                       , "unit" .= unit
+                       , "description" .= description
+                       ]
+              
+          in Sensors.stState seSt >>=
+             lookup key >>=
+             return . sensorObj
       sensorsObj =
           object $
-          maybe [] (\value ->
-                     [ "temperature" .= value ]
-                   ) $
-          Sensors.stState seSt
+          [ "network_connections" .=
+            catMaybes
+            [ mkSensor "ratbert.hq.c3d2.de:wlan0-stations"
+              "ratbert WiFi 2.4 GHz" "stations" "next to the DSL splitter"
+            , mkSensor "dogbert.hq.c3d2.de:wlan0-stations"
+              "dogbert WiFi 2.4 GHz" "stations" "library"
+            , mkSensor "dogbert.hq.c3d2.de:wlan1-stations"
+              "dogbert WiFi 5 GHz" "stations" "library"
+            , mkSensor "dogbert.hq.c3d2.de:wlan1-1-stations"
+              "dogbert WiFi 5 GHz extra" "stations" "library"
+            ]
+          ]
       obj' = HM.insert "state" stateObj' $
              HM.insert "sensors" sensorsObj $
              obj
