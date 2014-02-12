@@ -33,22 +33,18 @@ run tStatus =
 
         let mValue = JSON.decode $ LB.fromChunks [reply]
 
-        liftIO $
-          case mValue of
-            Just _value -> do
-              TOD now _ <- getClockTime
-              print (now, mValue)
-              interval <- atomically $ do
-                oldStatus <- readTVar tStatus
-                let newStatus =
-                      oldStatus { stState = mValue,
-                                  stLastUpdate = now
-                                }
-                writeTVar tStatus newStatus
-                return $ stInterval newStatus
-              threadDelay $ interval * 1000000
-            Nothing ->
-                threadDelay $ 60 * 1000000
+        liftIO $ do
+          TOD now _ <- getClockTime
+          print (now, mValue)
+          interval <- atomically $ do
+            oldStatus <- readTVar tStatus
+            let newStatus =
+                  oldStatus { stState = mValue,
+                              stLastUpdate = now
+                            }
+            writeTVar tStatus newStatus
+            return $ stInterval newStatus
+          threadDelay $ interval * 1000000
 
 start :: IO (IO Status)
 start = do
