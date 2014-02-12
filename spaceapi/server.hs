@@ -42,10 +42,12 @@ getSpaceApiR = do
           fromMaybe [] $
           HM.lookup "state" obj >>=
           parseMaybe parseJSON
+      open = Sw.isOpen swSt
+      message = Sw.stMessage swSt
       stateObj' =
           object $
-          [ "open" .= Sw.isOpen swSt,
-            "message" .= Sw.stMessage swSt,
+          [ "open" .= open,
+            "message" .= message,
             "lastchange" .= Sw.stLastChange swSt
           ] ++ stateObj
       mkSensor :: Text -> Text -> Text -> Text -> Maybe Value
@@ -75,6 +77,8 @@ getSpaceApiR = do
             ]
           ]
       obj' = HM.insert "state" stateObj' $
+             HM.insert "open" (toJSON open) $
+             HM.insert "status" (toJSON message) $
              HM.insert "sensors" sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
