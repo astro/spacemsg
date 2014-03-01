@@ -82,7 +82,8 @@ getSpaceApiR = do
              HM.insert "sensors" sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
-
+-- how to add a third status?
+-- not open means not necessarily closed as it could be full instead
 getStatusIconR :: Handler ()
 getStatusIconR = do
   App { appJSON = obj, appSwitch = sw } <- getYesod
