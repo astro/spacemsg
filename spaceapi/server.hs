@@ -82,18 +82,20 @@ getSpaceApiR = do
              HM.insert "sensors" sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
--- how to add a third status?
--- not open means not necessarily closed as it could be full instead
+
 getStatusIconR :: Handler ()
 getStatusIconR = do
   App { appJSON = obj, appSwitch = sw } <- getYesod
   swSt <- liftIO sw
-  let open = Sw.isOpen swSt
-      findUrl = (obj .: "state") >>= (.: "icon") >>=
-                (.: (if open
-                     then "open"
-                     else "closed"
-                    )) >>=
+  let state = Sw.stState swSt
+      stateKey = fromMaybe "closed" $
+                 lookup state
+                 [(Sw.On, "open"),
+                  (Sw.Full, "full")
+                 ]
+      findUrl = (obj .: "state") >>=
+                (.: "icon") >>=
+                (.: stateKey) >>=
                 parseJSON
       mUrl :: Maybe String
       mUrl = parseMaybe (const findUrl) $ Object obj
