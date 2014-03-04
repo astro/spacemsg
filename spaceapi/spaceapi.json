@@ -1,15 +1,15 @@
 { "api": "0.13"
 , "space": "C3D2 GCHQ"
-, "logo": "http://www.c3d2.de/images/ck.png"
-, "icon": { "open": "https://raw.github.com/astro/tigger/master/hq_status/hq_is_on.ink.png"
-          , "closed": "https://raw.github.com/astro/tigger/master/hq_status/hq_is_off.ink.png"
+, "logo": "https://www.c3d2.de/images/ck.png"
+, "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
+          , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
           }
-, "state": { "icon": { "open": "https://raw.github.com/astro/tigger/master/hq_status/hq_is_on.ink.png"
-                     , "closed": "https://raw.github.com/astro/tigger/master/hq_status/hq_is_off.ink.png"
-                     , "full": "https://raw.github.com/astro/tigger/master/hq_status/hq_is_full.ink.png"
+, "state": { "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
+                     , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
+                     , "full": "https://c3d2.de/image/shq_is_full.ink.png"
                      }
            }
-, "url": "http://www.c3d2.de/"
+, "url": "https://www.c3d2.de/"
 , "contact": { "phone": "4935148484999"
              , "twitter": "@pentafnord"
              , "ml": "c3d2@mail.skyhub.de"
@@ -22,13 +22,13 @@
               , "lon": 13.74701
               }
 , "feeds": { "blog": { "type": "atom"
-                     , "url": "http://www.c3d2.de/news-atom.xml"
+                     , "url": "https://www.c3d2.de/news-atom.xml"
                      },
              "wiki": { "type": "atom"
                      , "url": "https://wiki.c3d2.de/w/index.php?title=Spezial:Letzte_%C3%84nderungen&feed=atom"
                      },
              "calendar": { "type": "ical"
-                         , "url": "http://www.c3d2.de/ical.ics"
+                         , "url": "https://www.c3d2.de/ical.ics"
                          }
            }
 , "issue_report_channels": ["email", "ml"]
