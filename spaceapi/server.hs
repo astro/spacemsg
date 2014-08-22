@@ -88,10 +88,11 @@ getStatusIconR = do
   App { appJSON = obj, appSwitch = sw } <- getYesod
   swSt <- liftIO sw
   let state = Sw.stState swSt
-      stateKey = fromMaybe "closed" $
+      stateKey = fromMaybe "error" $
                  lookup state
                  [(Sw.On, "open"),
-                  (Sw.Full, "full")
+                  (Sw.Full, "full"),
+                  (Sw.Off, "closed")
                  ]
       findUrl = (obj .: "state") >>=
                 (.: "icon") >>=
