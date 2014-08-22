@@ -7,7 +7,7 @@
 , "state": { "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
                      , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
                      , "full": "https://c3d2.de/images/hq_is_full.ink.png"
-                     , "Error": "https://c3d2.de/images/hq_is_err.ink.png"
+                     , "error": "https://c3d2.de/images/hq_is_err.ink.png"
                      }
            }
 , "url": "https://www.c3d2.de/"
