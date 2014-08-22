@@ -2,7 +2,7 @@ module Sensors where
 
 import Control.Monad
 import Data.Monoid
-import System.ZMQ3.Monadic hiding (Off, On)
+import System.ZMQ4.Monadic hiding (Off, On)
 import Control.Concurrent
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as LB
