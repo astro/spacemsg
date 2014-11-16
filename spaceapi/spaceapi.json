@@ -3,6 +3,8 @@
 , "logo": "https://www.c3d2.de/images/ck.png"
 , "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
           , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
+          , "full": "https://c3d2.de/images/hq_is_full.ink.png"
+          , "error": "https://c3d2.de/images/hq_is_err.ink.png"
           }
 , "state": { "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
                      , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
