@@ -34,4 +34,8 @@
                          }
            }
 , "issue_report_channels": ["email", "ml"]
+, "projects": [ "https://datenspuren.de/"
+              , "http://www.c3d2.de/radio.html"
+              , "http://www.c3d2.de/schule.html"
+              ]
 }
