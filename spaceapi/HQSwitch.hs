@@ -61,11 +61,11 @@ run tStatus =
           print ("received", reply)
           TOD now _ <- getClockTime
           let updatePins (a, b) =
-                  case BC.take 6 reply of
-                    "23:0: " -> (False, b)
-                    "23:1: " -> (True, b)
-                    "24:0: " -> (a, False)
-                    "24:1: " -> (a, True)
+                  case BC.take 4 reply of
+                    "23:0" -> (False, b)
+                    "23:1" -> (True, b)
+                    "24:0" -> (a, False)
+                    "24:1" -> (a, True)
                     _ -> (a, b)
           changed <- atomically $ do
             oldStatus <- readTVar tStatus
