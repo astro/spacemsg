@@ -3,12 +3,16 @@ module HQSwitch where
 
 import Control.Monad
 import Data.Monoid
-import System.ZMQ4.Monadic hiding (Off, On)
 import Control.Concurrent
 import qualified Data.ByteString.Char8 as BC
 import System.Time
 import Control.Concurrent.STM
 import Data.Maybe
+import Network.HTTP.Client
+import Network.HTTP.Types.Status (statusCode)
+import Data.Aeson hiding (Error)
+import Data.Aeson.Types (parseMaybe)
+import qualified Data.HashMap.Strict as HM
 
 
 data State = Off
@@ -18,18 +22,18 @@ data State = Off
              deriving (Eq, Show)
 
 data Status = Status {
-      stPins :: Maybe (Bool, Bool),
+      stStatus :: Maybe Int,
       stLastChange :: Integer
     } deriving (Show)
 
 stState :: Status -> State
-stState Status { stPins = Nothing } =
+stState Status { stStatus = Nothing } =
     Error
-stState Status { stPins = Just pins } =
-    case pins of
-      (True, _) -> On
-      (False, True) -> Full
-      (False, False) -> Off
+stState Status { stStatus = Just value } =
+    case value of
+      0 -> Off
+      1 -> On
+      2 -> Full
 
 
 isOpen :: Status -> Bool
@@ -44,48 +48,44 @@ stMessage status =
     case stState status of
       Off -> "GCHQ is off"
       On -> "GCHQ is on"
-      Full -> "GCHQ is full"
+      Full -> "Party mode"
       _ -> "Error"
 
-run :: TVar Status -> IO ()
-run tStatus =
-    runZMQ $ do
-      sub <- socket Sub
-      connect sub "tcp://beere.hq.c3d2.de:12345"
-      subscribe sub "23"
-      subscribe sub "24"
-      forever $ do
-        reply <- receive sub
+poll :: IO (Maybe Int)
+poll = do
+     manager <- newManager defaultManagerSettings
+     req <- parseUrl "http://schalter.hq.c3d2.de/schalter.json"
+     res <- httpLbs req manager
+     case statusCode (responseStatus res) of
+          200 -> do
+              let json :: Maybe (HM.HashMap String Int)
+                  json = decode $ responseBody res
+              return $ json >>= HM.lookup "status"
+          _ ->
+              return Nothing
 
-        liftIO $ do
-          print ("received", reply)
-          TOD now _ <- getClockTime
-          let updatePins (a, b) =
-                  case BC.take 4 reply of
-                    "23:0" -> (False, b)
-                    "23:1" -> (True, b)
-                    "24:0" -> (a, False)
-                    "24:1" -> (a, True)
-                    _ -> (a, b)
-          changed <- atomically $ do
-            oldStatus <- readTVar tStatus
-            let newStatus = Status {
-                                    stPins =
-                                        Just $
-                                        updatePins $
-                                        fromMaybe (False, False) $
-                                        stPins oldStatus,
-                                    stLastChange = now
-                                  }
-            writeTVar tStatus newStatus
-            return $ if stState oldStatus /= stState newStatus
-                     then Just $ stState newStatus
-                     else Nothing
-          case changed of
-            Just state ->
-                       putStrLn $ show now ++ " " ++ show state
-            Nothing ->
-                       threadDelay 1000
+run :: TVar Status -> IO ()
+run tStatus = forever $ do
+    status <- poll
+
+    TOD now _ <- getClockTime
+    changed <-
+      atomically $ do
+                oldStatus <- readTVar tStatus
+                let newStatus = Status {
+                                  stStatus = status,
+                                  stLastChange = now
+                                }
+                case stState oldStatus /= stState newStatus of
+                  True -> do
+                     writeTVar tStatus newStatus
+                     return $ Just $ stState newStatus
+                  _ -> return Nothing
+    case changed of
+      Just state ->
+        putStrLn $ show now ++ " " ++ show state
+      Nothing ->
+        threadDelay 5000
 
 start :: IO (IO Status)
 start = do
