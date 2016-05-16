@@ -2,16 +2,12 @@
 module HQSwitch where
 
 import Control.Monad
-import Data.Monoid
 import Control.Concurrent
-import qualified Data.ByteString.Char8 as BC
 import System.Time
 import Control.Concurrent.STM
-import Data.Maybe
 import Network.HTTP.Client
 import Network.HTTP.Types.Status (statusCode)
 import Data.Aeson hiding (Error)
-import Data.Aeson.Types (parseMaybe)
 import qualified Data.HashMap.Strict as HM
 
 
@@ -34,7 +30,7 @@ stState Status { stStatus = Just value } =
       0 -> Off
       1 -> On
       2 -> Full
-
+      _ -> Error
 
 isOpen :: Status -> Bool
 isOpen status =
@@ -58,9 +54,9 @@ poll = do
      res <- httpLbs req manager
      case statusCode (responseStatus res) of
           200 -> do
-              let json :: Maybe (HM.HashMap String Int)
-                  json = decode $ responseBody res
-              return $ json >>= HM.lookup "status"
+              let mObj :: Maybe (HM.HashMap String Int)
+                  mObj = decode $ responseBody res
+              return $ mObj >>= HM.lookup "status"
           _ ->
               return Nothing
 

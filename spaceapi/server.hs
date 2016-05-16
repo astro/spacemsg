@@ -4,11 +4,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 import Data.Maybe
-import Control.Applicative
 import Yesod
 import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
-import Data.Text (Text)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status302, status404)
