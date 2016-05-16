@@ -14,13 +14,11 @@ import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status302, status404)
 
 import qualified HQSwitch as Sw
-import qualified Sensors as Sensors
 
 -- TODO: .cabal
 data App = App {
       appJSON :: Object,
-      appSwitch :: IO Sw.Status,
-      appSensors :: IO Sensors.Status
+      appSwitch :: IO Sw.Status
     }
 
 mkYesod "App" [parseRoutes|
@@ -35,9 +33,8 @@ getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
   addHeader "Access-Control-Allow-Origin" "*"
   
-  App { appJSON = obj, appSwitch = sw, appSensors = se } <- getYesod
+  App { appJSON = obj, appSwitch = sw } <- getYesod
   swSt <- liftIO sw
-  seSt <- liftIO se
   let stateObj =
           fromMaybe [] $
           HM.lookup "state" obj >>=
@@ -50,36 +47,9 @@ getSpaceApiR = do
             "message" .= message,
             "lastchange" .= Sw.stLastChange swSt
           ] ++ stateObj
-      mkSensor :: Text -> Text -> Text -> Text -> Maybe Value
-      mkSensor key name unit description =
-          let sensorObj value =
-                object [ "name" .= name
-                       , "value" .= value
-                       , "unit" .= unit
-                       , "description" .= description
-                       ]
-              
-          in Sensors.stState seSt >>=
-             HM.lookup key >>=
-             return . sensorObj
-      sensorsObj =
-          object $
-          [ "network_connections" .=
-            catMaybes
-            [ mkSensor "ratbert.hq.c3d2.de:wlan0-stations"
-              "ratbert WiFi 2.4 GHz" "stations" "next to the DSL splitter"
-            , mkSensor "dogbert.hq.c3d2.de:wlan0-stations"
-              "dogbert WiFi 2.4 GHz" "stations" "library"
-            , mkSensor "dogbert.hq.c3d2.de:wlan1-stations"
-              "dogbert WiFi 5 GHz" "stations" "library"
-            , mkSensor "dogbert.hq.c3d2.de:wlan1-1-stations"
-              "dogbert WiFi 5 GHz extra" "stations" "library"
-            ]
-          ]
       obj' = HM.insert "state" stateObj' $
              HM.insert "open" (toJSON open) $
              HM.insert "status" (toJSON message) $
-             HM.insert "sensors" sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
 
@@ -113,6 +83,5 @@ main = do
          fromMaybe (error "Cannot load spaceapi.json") <$>
          decode <$>
          LBC.readFile "spaceapi.json" <*>
-         Sw.start <*>
-         Sensors.start
+         Sw.start
   warp 3000 app
