@@ -3,6 +3,7 @@ module HQSwitch where
 
 import Control.Monad
 import Control.Concurrent
+import Control.Exception (catch, SomeException)
 import System.Time
 import Control.Concurrent.STM
 import Network.HTTP.Client
@@ -62,7 +63,9 @@ poll = do
 
 run :: TVar Status -> IO ()
 run tStatus = forever $ do
-    status <- poll
+    status <- poll `catch` \e -> do
+                          print (e :: SomeException)
+                          return Nothing
 
     TOD now _ <- getClockTime
     changed <-
