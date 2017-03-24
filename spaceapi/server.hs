@@ -98,4 +98,4 @@ main = do
          LBC.readFile "spaceapi.json" <*>
          Sw.start <*>
          newSensors
-  warp 3001 app
+  warp 3000 app
