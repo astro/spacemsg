@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 import Data.Maybe
 import Yesod
@@ -9,19 +11,23 @@ import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as LBC
-import Network.HTTP.Types.Status (status302, status404)
+import Network.HTTP.Types.Status (status204, status302, status404)
+import Data.Text (Text)
 
 import qualified HQSwitch as Sw
+import Sensors
 
 -- TODO: .cabal
 data App = App {
       appJSON :: Object,
-      appSwitch :: IO Sw.Status
+      appSwitch :: IO Sw.Status,
+      appSensors :: SensorsRef
     }
 
 mkYesod "App" [parseRoutes|
 /spaceapi.json SpaceApiR GET
 /status.png StatusIconR GET
+/sensors/#Text SensorsEndpointR POST
 |]
 
 instance Yesod App where
@@ -31,8 +37,9 @@ getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
   addHeader "Access-Control-Allow-Origin" "*"
   
-  App { appJSON = obj, appSwitch = sw } <- getYesod
+  App { appJSON = obj, appSwitch = sw, appSensors = sensorsRef } <- getYesod
   swSt <- liftIO sw
+  sensorsObj <- liftIO $ renderSensors sensorsRef
   let stateObj =
           fromMaybe [] $
           HM.lookup "state" obj >>=
@@ -48,6 +55,7 @@ getSpaceApiR = do
       obj' = HM.insert "state" stateObj' $
              HM.insert "open" (toJSON open) $
              HM.insert "status" (toJSON message) $
+             HM.insert "sensors" sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
 
@@ -74,6 +82,13 @@ getStatusIconR = do
     Nothing ->
         sendResponseStatus status404 ()
 
+postSensorsEndpointR :: Text -> Handler ()
+postSensorsEndpointR name = do
+  (Success obj :: Result Value) <- parseJsonBody
+  state <- appSensors <$> getYesod
+  liftIO $ updateSensors name obj state
+  sendResponseStatus status204 ()
+
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
 main = do
@@ -81,5 +96,6 @@ main = do
          fromMaybe (error "Cannot load spaceapi.json") <$>
          decode <$>
          LBC.readFile "spaceapi.json" <*>
-         Sw.start
-  warp 3000 app
+         Sw.start <*>
+         newSensors
+  warp 3001 app

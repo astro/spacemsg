@@ -15,5 +15,8 @@ executable         server
                      , http-types
                      , unordered-containers
                      , http-client
+                     , vector
+                     , hashable
+                     , scientific
 
     ghc-options:       -threaded -O2 -Wall
