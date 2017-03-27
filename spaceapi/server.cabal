@@ -18,5 +18,7 @@ executable         server
                      , vector
                      , hashable
                      , scientific
+                     , network
+                     , cereal
 
     ghc-options:       -threaded -O2 -Wall

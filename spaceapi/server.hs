@@ -6,6 +6,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 import Data.Maybe
+import Control.Monad (void)
 import Yesod
 import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
@@ -13,9 +14,11 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status204, status302, status404)
 import Data.Text (Text)
+import Control.Concurrent (forkIO)
 
 import qualified HQSwitch as Sw
 import Sensors
+import Collectd.Listener (runListener)
 
 -- TODO: .cabal
 data App = App {
@@ -36,7 +39,7 @@ instance Yesod App where
 getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
   addHeader "Access-Control-Allow-Origin" "*"
-  
+
   App { appJSON = obj, appSwitch = sw, appSensors = sensorsRef } <- getYesod
   swSt <- liftIO sw
   sensorsObj <- liftIO $ renderSensors sensorsRef
@@ -92,10 +95,13 @@ postSensorsEndpointR name = do
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
 main = do
+  sensorsRef <- newSensors
+  void $ forkIO $
+    runListener "::" "25826" $ handleCollectdSensors sensorsRef
   app <- App <$>
          fromMaybe (error "Cannot load spaceapi.json") <$>
          decode <$>
          LBC.readFile "spaceapi.json" <*>
          Sw.start <*>
-         newSensors
-  warp 3000 app
+         pure sensorsRef
+  warp 3001 app
