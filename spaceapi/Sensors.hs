@@ -91,6 +91,21 @@ updateSensors location (Object obj) sensorsRef = do
     _ ->
       return ()
 
+  -- Handle DHT22 readings
+  case getValue "temperature" >>= parseDouble of
+    Just temperature ->
+      atomically $
+      updateSensor' "temperature" "DHT22" location temperature "°C"
+    Nothing ->
+      return ()
+
+  case getValue "humidity" >>= parseDouble of
+    Just humidity ->
+      atomically $
+      updateSensor' "humidity" "DHT22" location humidity "%"
+    Nothing ->
+      return ()
+
 updateSensors _ _ _ = return ()
 
 interestingData :: C.Datum -> Maybe (Text, Text, Text, Double, Text)
