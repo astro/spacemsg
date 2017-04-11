@@ -56,8 +56,8 @@ updateSensor sensorsRef now category name location value unit = do
   modifyTVar' sensorsRef $
     HM.insert k $ SensorState value unit now
 
-updateSensors :: Text -> Value -> SensorsRef -> IO ()
-updateSensors location (Object obj) sensorsRef = do
+updateSensors :: Text -> Value -> SensorsRef -> (Text -> Double -> IO ()) -> IO ()
+updateSensors location (Object obj) sensorsRef monitorFun = do
   TOD now _ <- getClockTime
 
   let Array values = fromMaybe emptyArray $
@@ -80,33 +80,44 @@ updateSensors location (Object obj) sensorsRef = do
 
       updateSensor' = updateSensor sensorsRef now
 
+      monitor name value = do
+        let logName = T.concat [ location
+                               , "-"
+                               , name
+                               ]
+        monitorFun logName value
+
   -- Handle SDS011 readings
   case ( getValue "SDS_P1" >>= parseDouble
        , getValue "SDS_P2" >>= parseDouble
        ) of
-    (Just pm10, Just pm2) ->
+    (Just pm10, Just pm2) -> do
       atomically $ do
-      updateSensor' "dust" "PM2.5" location pm2 "µg/m³"
-      updateSensor' "dust" "PM10" location pm10 "µg/m³"
+        updateSensor' "dust" "PM2.5" location pm2 "µg/m³"
+        updateSensor' "dust" "PM10" location pm10 "µg/m³"
+      monitor "pm2" pm2
+      monitor "pm10" pm10
     _ ->
       return ()
 
   -- Handle DHT22 readings
   case getValue "temperature" >>= parseDouble of
-    Just temperature ->
+    Just temperature -> do
       atomically $
-      updateSensor' "temperature" "DHT22" location temperature "°C"
+        updateSensor' "temperature" "DHT22" location temperature "°C"
+      monitor "temperature" temperature
     Nothing ->
       return ()
 
   case getValue "humidity" >>= parseDouble of
-    Just humidity ->
+    Just humidity -> do
       atomically $
-      updateSensor' "humidity" "DHT22" location humidity "%"
+        updateSensor' "humidity" "DHT22" location humidity "%"
+      monitor "humidity" humidity
     Nothing ->
       return ()
 
-updateSensors _ _ _ = return ()
+updateSensors _ _ _ _ = return ()
 
 interestingData :: C.Datum -> Maybe (Text, Text, Text, Double, Text)
 interestingData d

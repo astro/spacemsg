@@ -19,9 +19,11 @@ import Control.Concurrent (forkIO)
 import qualified HQSwitch as Sw
 import Sensors
 import Collectd.Listener (runListener)
+import EKG
 
 -- TODO: .cabal
 data App = App {
+      appMonitor :: Monitor,
       appJSON :: Object,
       appSwitch :: IO Sw.Status,
       appSensors :: SensorsRef
@@ -36,8 +38,19 @@ mkYesod "App" [parseRoutes|
 instance Yesod App where
     makeSessionBackend _ = return Nothing
 
+withMonitor_ :: Handler ((Monitor -> IO a) -> IO a)
+withMonitor_ = do
+  monitor <- appMonitor <$> getYesod
+  return $ \f -> f monitor
+
+withMonitor :: (Monitor -> IO a) -> Handler a
+withMonitor f =
+  (appMonitor <$> getYesod) >>= liftIO . f
+
 getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
+  withMonitor $ incCounter "getSpaceApi"
+
   addHeader "Access-Control-Allow-Origin" "*"
 
   App { appJSON = obj, appSwitch = sw, appSensors = sensorsRef } <- getYesod
@@ -64,6 +77,8 @@ getSpaceApiR = do
 
 getStatusIconR :: Handler ()
 getStatusIconR = do
+  withMonitor $ incCounter "getStatusIcon"
+
   App { appJSON = obj, appSwitch = sw } <- getYesod
   swSt <- liftIO sw
   let state = Sw.stState swSt
@@ -87,21 +102,25 @@ getStatusIconR = do
 
 postSensorsEndpointR :: Text -> Handler ()
 postSensorsEndpointR location = do
+  withMonitor $ incCounter "postSensorsEndpoint"
   (Success obj :: Result Value) <- parseJsonBody
   state <- appSensors <$> getYesod
-  liftIO $ updateSensors location obj state
+  monitorFun <- withMonitor_
+  let monitorFun' name value = monitorFun $ setGauge name value
+  liftIO $ updateSensors location obj state monitorFun'
   sendResponseStatus status204 ()
 
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
 main = do
+  ekg <- startMonitor 3001
   sensorsRef <- newSensors
   void $ forkIO $
     runListener "::" "25826" $ handleCollectdSensors sensorsRef
-  app <- App <$>
+  app <- App ekg <$>
          fromMaybe (error "Cannot load spaceapi.json") <$>
          decode <$>
          LBC.readFile "spaceapi.json" <*>
          Sw.start <*>
          pure sensorsRef
-  warp 3001 app
+  warp 3000 app
