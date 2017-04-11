@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{- |TODO:
+
+- sum up wifi sensors
+- delta state for if_octets
+-}
 module Sensors (SensorsRef, newSensors, handleCollectdSensors, updateSensors, renderSensors) where
 
 import Data.Maybe

@@ -86,10 +86,10 @@ getStatusIconR = do
         sendResponseStatus status404 ()
 
 postSensorsEndpointR :: Text -> Handler ()
-postSensorsEndpointR name = do
+postSensorsEndpointR location = do
   (Success obj :: Result Value) <- parseJsonBody
   state <- appSensors <$> getYesod
-  liftIO $ updateSensors name obj state
+  liftIO $ updateSensors location obj state
   sendResponseStatus status204 ()
 
 -- TODO: toWaiApp(Plain) + CORS middleware
