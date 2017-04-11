@@ -57,4 +57,4 @@ incCounter name monitor = do
 setGauge :: RealFrac v => Text -> v -> Monitor -> IO ()
 setGauge name value monitor = do
   ValueGauge gauge <- getMetric (KeyGauge name) monitor
-  set gauge $ truncate $ 100 * value
+  set gauge $ truncate $ 1000 * value
