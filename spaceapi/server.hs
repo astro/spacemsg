@@ -21,7 +21,6 @@ import Sensors
 import Collectd.Listener (runListener)
 import EKG
 
--- TODO: .cabal
 data App = App {
       appMonitor :: Monitor,
       appJSON :: Object,

@@ -22,4 +22,4 @@ executable         server
                      , cereal
                      , ekg
 
-    ghc-options:       -threaded -O2 -Wall
+    ghc-options:       -threaded -O2 -Wall -rtsopts -with-rtsopts=-N
