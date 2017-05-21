@@ -152,17 +152,22 @@ renderSensors :: SensorsRef -> IO Value
 renderSensors sensorsRef = do
   TOD now _ <- getClockTime
 
-  sensors <- atomically $ do
+  (sensors, deleted) <- atomically $ do
     sensors <- readTVar sensorsRef
     let oldSize = HM.size sensors
         sensors' = HM.filter (\state ->
                                 sTime state + sensorTimeout > now
                              ) sensors
         newSize = HM.size sensors
-    when (oldSize /= newSize) $
+        deleted = oldSize - newSize
+    when (deleted > 0) $
       writeTVar sensorsRef sensors'
 
-    return sensors'
+    return (sensors', deleted)
+
+  when (deleted /= 0) $
+    putStrLn $ "Deleted " ++ show deleted ++ " sensor values from " ++
+    show (map (\(SensorId category name _) -> (category, name)) $ HM.keys sensors)
 
   return $ Object $
     HM.map (Array . V.fromList) $
