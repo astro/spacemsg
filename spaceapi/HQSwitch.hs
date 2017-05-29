@@ -84,7 +84,8 @@ run tStatus = forever $ do
       Just state ->
         putStrLn $ show now ++ " " ++ show state
       Nothing ->
-        threadDelay 5000
+        -- | 5 000 000 microseconds
+        threadDelay 5000000
 
 start :: IO (IO Status)
 start = do
