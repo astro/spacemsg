@@ -6,25 +6,69 @@ use std::collections::BTreeMap;
 use sysfs_gpio::{Pin, Direction, Error};
 use std::thread::sleep;
 use std::time::Duration;
+use std::sync::{Arc, RwLock};
 
+
+#[derive(Copy, Clone)]
+enum DoorStatus {
+    Unknown,
+    Unlocked,
+    Locked,
+}
+
+#[derive(Clone)]
+pub struct DoorState {
+    state: Arc<RwLock<DoorStatus>>
+}
+
+impl DoorState {
+    pub fn new() -> Self {
+        DoorState {
+            state: Arc::new(RwLock::new(DoorStatus::Unknown)),
+        }
+    }
+
+    pub fn chain(self) -> Chain {
+        let mut chain = Chain::new(self);
+        chain.link_after(JsonResponseMiddleware);
+        chain
+    }
+}
+
+impl Handler for DoorState {
+    fn handle(&self, _: &mut Request) -> IronResult<Response> {
+        let mut json: BTreeMap<String, bool> = BTreeMap::new();
+        match *self.state.read().unwrap() {
+            DoorStatus::Unknown =>
+                json.insert("unknown".to_owned(), true),
+            DoorStatus::Unlocked =>
+                json.insert("locked".to_owned(), false),
+            DoorStatus::Locked =>
+                json.insert("locked".to_owned(), true),
+        };
+        Ok(Response::with((status::Ok, JsonResponse::new(json, None))))
+    }
+}
 
 const GPIO_UNLOCK: u64 = 18;
 const GPIO_LOCK: u64 = 27;
 
 pub struct DoorHandler {
     gpio: Pin,
+    active_status: DoorStatus,
+    state: DoorState,
 }
 
 impl DoorHandler {
-    pub fn new_unlock() -> Self {
-        Self::new(GPIO_UNLOCK)
+    pub fn new_unlock(state: &DoorState) -> Self {
+        Self::new(GPIO_UNLOCK, DoorStatus::Unlocked, state.clone())
     }
 
-    pub fn new_lock() -> Self {
-        Self::new(GPIO_LOCK)
+    pub fn new_lock(state: &DoorState) -> Self {
+        Self::new(GPIO_LOCK, DoorStatus::Locked, state.clone())
     }
 
-    fn new(pin_num: u64) -> Self {
+    fn new(pin_num: u64, active_status: DoorStatus, state: DoorState) -> Self {
         let gpio = Pin::new(pin_num);
         gpio.export()
             .unwrap_or_else(|e| println!("Cannot export GPIO #{}: {}", pin_num, e));
@@ -32,6 +76,8 @@ impl DoorHandler {
 
         DoorHandler {
             gpio: gpio,
+            active_status: active_status,
+            state: state,
         }
     }
 
@@ -42,6 +88,8 @@ impl DoorHandler {
     }
 
     fn activate(&self) -> Result<(), Error> {
+        let mut state = self.state.state.write().unwrap();
+
         try!(self.gpio.set_value(1));
         // 20ms between 1, 0
         sleep(Duration::from_millis(20));
@@ -50,6 +98,8 @@ impl DoorHandler {
         // hold 0 to forbid a long 1 with consecutive requests
         // TODO: locking?
         sleep(Duration::from_millis(20));
+
+        *state = self.active_status;
 
         Ok(())
     }
