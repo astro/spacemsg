@@ -20,6 +20,7 @@ data State = Off
 
 data Status = Status {
       stStatus :: Maybe Int,
+      stLocked :: Maybe Bool,
       stLastChange :: Integer
     } deriving (Show)
 
@@ -42,30 +43,51 @@ isOpen status =
 
 stMessage :: Status -> String
 stMessage status =
-    case stState status of
-      Off -> "GCHQ is off"
-      On -> "GCHQ is on"
-      Full -> "Party mode"
-      _ -> "Error"
+  let message =
+        case stState status of
+          Off -> "GCHQ is off"
+          On -> "GCHQ is on"
+          Full -> "Party mode"
+          _ -> "Error"
+      lockSuffix =
+        case stLocked status of
+          Just False -> " (unlocked)"
+          Just True -> " (locked)"
+          Nothing -> ""
+  in message ++ lockSuffix
 
-poll :: IO (Maybe Int)
+poll :: IO (Maybe Int, Maybe Bool)
 poll = do
      manager <- newManager defaultManagerSettings
-     req <- parseUrl "http://schalter.hq.c3d2.de/schalter.json"
+     req <- parseUrlThrow "http://schalter.hq.c3d2.de/schalter.json"
      res <- httpLbs req manager
-     case statusCode (responseStatus res) of
-          200 -> do
-              let mObj :: Maybe (HM.HashMap String Int)
-                  mObj = decode $ responseBody res
-              return $ mObj >>= HM.lookup "status"
-          _ ->
-              return Nothing
+     let schalter =
+           case statusCode (responseStatus res) of
+             200 ->
+               let mObj :: Maybe (HM.HashMap String Int)
+                   mObj = decode $ responseBody res
+               in mObj >>= HM.lookup "status"
+             _ ->
+               Nothing
+
+     req' <- parseUrlThrow "http://schalter.hq.c3d2.de/door.json"
+     res' <- httpLbs req' manager
+     let door =
+           case statusCode (responseStatus res') of
+             200 ->
+               let mObj :: Maybe (HM.HashMap String Bool)
+                   mObj = decode $ responseBody res'
+               in mObj >>= HM.lookup "locked"
+             _ ->
+               Nothing
+
+     return (schalter, door)
 
 run :: TVar Status -> IO ()
 run tStatus = forever $ do
-    status <- poll `catch` \e -> do
-                          print (e :: SomeException)
-                          return Nothing
+    (status, door) <- poll `catch` \e -> do
+      print (e :: SomeException)
+      return (Nothing, Nothing)
 
     TOD now _ <- getClockTime
     changed <-
@@ -73,6 +95,7 @@ run tStatus = forever $ do
                 oldStatus <- readTVar tStatus
                 let newStatus = Status {
                                   stStatus = status,
+                                  stLocked = door,
                                   stLastChange = now
                                 }
                 case stState oldStatus /= stState newStatus of
@@ -90,6 +113,6 @@ run tStatus = forever $ do
 start :: IO (IO Status)
 start = do
   TOD now _ <- getClockTime
-  tStatus <- newTVarIO $ Status Nothing now
+  tStatus <- newTVarIO $ Status Nothing Nothing now
   _thr <- forkIO $ run tStatus
   return $ readTVarIO tStatus
