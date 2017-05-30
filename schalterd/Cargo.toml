@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Astro <astro@spaceboyz.net>"]
 
 [dependencies]
-iron = "*"
-router = "*"
-iron-json-response = "*"
-sysfs_gpio = "~0.4.2"
+iron = "0.5.1"
+router = "0.5.1"
+iron-json-response = "0.5.1"
+sysfs_gpio = "0.5.0"
