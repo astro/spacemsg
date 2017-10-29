@@ -1,5 +1,6 @@
 use iron::prelude::*;
 use iron::status;
+use iron::headers::{Authorization, Basic};
 use iron::middleware::Handler;
 use ijr::{JsonResponse, JsonResponseMiddleware};
 use std::collections::BTreeMap;
@@ -57,18 +58,19 @@ pub struct DoorHandler {
     gpio: Pin,
     active_status: DoorStatus,
     state: DoorState,
+    password: String,
 }
 
 impl DoorHandler {
-    pub fn new_unlock(state: &DoorState) -> Self {
-        Self::new(GPIO_UNLOCK, DoorStatus::Unlocked, state.clone())
+    pub fn new_unlock(state: &DoorState, password: String) -> Self {
+        Self::new(GPIO_UNLOCK, DoorStatus::Unlocked, state.clone(), password)
     }
 
-    pub fn new_lock(state: &DoorState) -> Self {
-        Self::new(GPIO_LOCK, DoorStatus::Locked, state.clone())
+    pub fn new_lock(state: &DoorState, password: String) -> Self {
+        Self::new(GPIO_LOCK, DoorStatus::Locked, state.clone(), password)
     }
 
-    fn new(pin_num: u64, active_status: DoorStatus, state: DoorState) -> Self {
+    fn new(pin_num: u64, active_status: DoorStatus, state: DoorState, password: String) -> Self {
         let gpio = Pin::new(pin_num);
         gpio.export()
             .unwrap_or_else(|e| println!("Cannot export GPIO #{}: {}", pin_num, e));
@@ -78,6 +80,7 @@ impl DoorHandler {
             gpio: gpio,
             active_status: active_status,
             state: state,
+            password,
         }
     }
 
@@ -103,16 +106,29 @@ impl DoorHandler {
 
         Ok(())
     }
+
+    fn authenticate(&self, auth: &Authorization<Basic>) -> bool {
+        let basic = &auth.0;
+        basic.password.as_ref() == Some(&self.password) ||
+            (basic.password.is_none() && basic.username == self.password)
+    }
 }
 
 impl Handler for DoorHandler {
-    fn handle(&self, _: &mut Request) -> IronResult<Response> {
-        let mut json: BTreeMap<String, i8> = BTreeMap::new();
-        self.activate()
-            .unwrap_or_else(|e| {
-                println!("Cannot activate {:?}: {:?}", self.gpio, e);
-                json.insert("error".to_owned(), 1);
-            });
-        Ok(Response::with((status::Ok, JsonResponse::new(json, None))))
+    fn handle(&self, req: &mut Request) -> IronResult<Response> {
+        let auth = req.headers.get();
+        match auth {
+            Some(ref auth) if self.authenticate(auth) => {
+                let mut json: BTreeMap<String, i8> = BTreeMap::new();
+                self.activate()
+                    .unwrap_or_else(|e| {
+                        println!("Cannot activate {:?}: {:?}", self.gpio, e);
+                        json.insert("error".to_owned(), 1);
+                    });
+                Ok(Response::with((status::Ok, JsonResponse::new(json, None))))
+            },
+            _ =>
+                Ok(Response::with(status::Unauthorized))
+        }
     }
 }
