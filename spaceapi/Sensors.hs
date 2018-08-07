@@ -122,11 +122,11 @@ updateSensors _ _ _ _ = return ()
 interestingData :: C.Datum -> Maybe (Text, Text, Text, Double, Text)
 interestingData d
 
-  | (dHost == "ap2" || dHost == "ap3") && dPlugin == "iwinfo" && dType == "stations" =
+  | (dHost `elem` map fst apLocations) && dPlugin == "iwinfo" && dType == "stations" =
       case C.datumValues d of
         [C.Gauge value] ->
           let name = T.concat [dHost, " ", dPluginInstance]
-          in Just ("network_connections", name, "", value, "stations")
+          in Just ("network_connections", name, fromMaybe "" $ dHost `lookup` apLocations, value, "stations")
         _ ->
           Nothing
   -- | (dHost == "upstream1" && dPluginInstance == "up1" || dHost == "anon1" && dPluginInstance == "ipredator") && dPlugin == "interface" && dType == "if_octets" =
@@ -134,6 +134,12 @@ interestingData d
   --       [C.Derive rx, C.Derive tx] ->
   | otherwise = Nothing
   where (dHost, dPlugin, dPluginInstance, dType, _dTypeInstance) = C.datumPath d
+        apLocations = [
+            ("ap2", "Starkduftkammer"),
+            ("ap3", "Keller"),
+            ("ap31", "Assembly"),
+            ("ap32", "Podest")
+          ]
 
 handleCollectdSensors :: SensorsRef -> [C.Datum] -> IO ()
 handleCollectdSensors sensorsRef datas = do
