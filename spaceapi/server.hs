@@ -114,12 +114,19 @@ main :: IO ()
 main = do
   ekg <- startMonitor 3001
   sensorsRef <- newSensors
+  let loadJson :: FromJSON a => String -> IO a
+      loadJson filename =
+        fromMaybe (error $ "Cannot decode " ++ filename) <$>
+        decode <$>
+        LBC.readFile filename
+
+  wifiLocations <- loadJson "wifi-locations.json"
+  putStrLn $ "Wifi locations: " ++ show wifiLocations
   void $ forkIO $
-    runListener "::" "25826" $ handleCollectdSensors sensorsRef
-  app <- App ekg <$>
-         fromMaybe (error "Cannot load spaceapi.json") <$>
-         decode <$>
-         LBC.readFile "spaceapi.json" <*>
+    runListener "::" "25826" $ handleCollectdSensors sensorsRef wifiLocations
+
+  spaceapiJson <- loadJson "spaceapi.json"
+  app <- App ekg spaceapiJson <$>
          Sw.start <*>
          pure sensorsRef
   warp 3000 app

@@ -5,7 +5,7 @@
 - sum up wifi sensors
 - delta state for if_octets
 -}
-module Sensors (SensorsRef, newSensors, handleCollectdSensors, updateSensors, renderSensors) where
+module Sensors (SensorsRef, WifiLocations, newSensors, handleCollectdSensors, updateSensors, renderSensors) where
 
 import Data.Maybe
 import GHC.Generics (Generic)
@@ -43,6 +43,8 @@ data SensorState = SensorState {
   _sUnit :: Text,
   sTime :: Integer
 }
+
+type WifiLocations = HM.HashMap Text Text
 
 sensorTimeout :: Integer
 sensorTimeout = 300
@@ -119,14 +121,14 @@ updateSensors location (Object obj) sensorsRef monitorFun = do
 
 updateSensors _ _ _ _ = return ()
 
-interestingData :: C.Datum -> Maybe (Text, Text, Text, Double, Text)
-interestingData d
+interestingData :: C.Datum -> WifiLocations -> Maybe (Text, Text, Text, Double, Text)
+interestingData d wifiLocations
 
-  | (dHost `elem` map fst apLocations) && dPlugin == "iwinfo" && dType == "stations" =
+  | (dHost `elem` allowedHosts) && dPlugin == "iwinfo" && dType == "stations" =
       case C.datumValues d of
         [C.Gauge value] ->
           let name = T.concat [dHost, " ", dPluginInstance]
-          in Just ("network_connections", name, fromMaybe "" $ dHost `lookup` apLocations, value, "stations")
+          in Just ("network_connections", name, fromMaybe "" $ dHost `HM.lookup` wifiLocations, value, "stations")
         _ ->
           Nothing
   -- | (dHost == "upstream1" && dPluginInstance == "up1" || dHost == "anon1" && dPluginInstance == "ipredator") && dPlugin == "interface" && dType == "if_octets" =
@@ -134,20 +136,15 @@ interestingData d
   --       [C.Derive rx, C.Derive tx] ->
   | otherwise = Nothing
   where (dHost, dPlugin, dPluginInstance, dType, _dTypeInstance) = C.datumPath d
-        apLocations = [
-            ("ap2", "Starkduftkammer"),
-            ("ap3", "Keller"),
-            ("ap31", "Assembly"),
-            ("ap32", "Podest")
-          ]
+        allowedHosts = HM.keys wifiLocations
 
-handleCollectdSensors :: SensorsRef -> [C.Datum] -> IO ()
-handleCollectdSensors sensorsRef datas = do
+handleCollectdSensors :: SensorsRef -> WifiLocations -> [C.Datum] -> IO ()
+handleCollectdSensors sensorsRef wifiLocations datas = do
   TOD now _ <- getClockTime
   let updateSensor' = updateSensor sensorsRef now
 
   atomically $ forM_ datas $ \d ->
-    case interestingData d of
+    case interestingData d wifiLocations of
       Nothing ->
         return ()
       Just (category, name, location, value, unit) ->
