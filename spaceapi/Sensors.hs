@@ -191,14 +191,23 @@ renderSensors sensorsRef = do
     ) HM.empty sensors
 
   where cmpItems (Object item1) (Object item2) =
-          let itemToToken item =
-                let name = do String name <- "name" `HM.lookup` item
-                              return name
-                in maybe []
-                   tokenize name
-              tokens1 = itemToToken item1
-              tokens2 = itemToToken item2
-          in tokens1 `compare` tokens2
+          let tokenizeField field item =
+                case field `HM.lookup` item of
+                  Just (String s) -> tokenize s
+                  _ -> []
+              compareFields field =
+                tokenizeField field item1 `compare` tokenizeField field item2
+              orderOr f f' =
+                case f of
+                  EQ -> f'
+                  ordering -> ordering
+          in compareFields "name" `orderOr`
+             compareFields "location" `orderOr`
+             compareFields "unit" `orderOr`
+             compareFields "value"
+        cmpItems _value1 _value2 =
+          trace "Comparing non-items!"
+          EQ
 
 data Token = NumberToken Integer
            | TextToken Text
