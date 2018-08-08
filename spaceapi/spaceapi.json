@@ -1,41 +1,55 @@
-{ "api": "0.13"
-, "space": "C3D2 GCHQ"
-, "logo": "https://www.c3d2.de/images/ck.png"
-, "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
-          , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
-          , "full": "https://c3d2.de/images/hq_is_full.ink.png"
-          , "error": "https://c3d2.de/images/hq_is_err.ink.png"
-          }
-, "state": { "icon": { "open": "https://c3d2.de/images/hq_is_on.ink.png"
-                     , "closed": "https://c3d2.de/images/hq_is_off.ink.png"
-                     , "full": "https://c3d2.de/images/hq_is_full.ink.png"
-                     , "error": "https://c3d2.de/images/hq_is_err.ink.png"
-                     }
-           }
-, "url": "https://www.c3d2.de/"
-, "contact": { "phone": "+4935148484999"
-             , "twitter": "@pentafnord"
-             , "ml": "c3d2@lists.c3d2.de"
-             , "jabber": "c3d2@chat.c3d2.de"
-             , "email": "mail@c3d2.de"
-             }
-, "location": { "address": "Lingnerallee 3, 01069 Dresden, Germany"
-              , "lat": 51.04718
-              , "lon": 13.74701
-              }
-, "feeds": { "blog": { "type": "atom"
-                     , "url": "https://www.c3d2.de/news-atom.xml"
-                     },
-             "wiki": { "type": "atom"
-                     , "url": "https://wiki.c3d2.de/w/index.php?title=Spezial:Letzte_%C3%84nderungen&feed=atom"
-                     },
-             "calendar": { "type": "ical"
-                         , "url": "https://www.c3d2.de/ical.ics"
-                         }
-           }
-, "issue_report_channels": ["email", "ml"]
-, "projects": [ "https://datenspuren.de/"
-              , "http://www.c3d2.de/radio.html"
-              , "http://www.c3d2.de/schule.html"
-              ]
+{
+  "api": "0.13",
+  "space": "C3D2",
+  "logo":"https://www.c3d2.de/images/ck.png",
+  "icon": {
+    "open": "https://c3d2.de/images/hq_is_on.ink.png",
+    "closed": "https://c3d2.de/images/hq_is_off.ink.png",
+    "full": "https://c3d2.de/images/hq_is_full.ink.png",
+    "error": "https://c3d2.de/images/hq_is_err.ink.png"
+  },
+  "state": {
+    "icon": {
+      "open": "https://c3d2.de/images/hq_is_on.ink.png",
+      "closed": "https://c3d2.de/images/hq_is_off.ink.png",
+      "full": "https://c3d2.de/images/hq_is_full.ink.png",
+      "error": "https://c3d2.de/images/hq_is_err.ink.png"
+    }
+  },
+  "url": "https://www.c3d2.de/",
+  "contact": {
+    "twitter": "@pentafnord",
+    "ml": "c3d2@lists.c3d2.de",
+    "jabber": "c3d2@chat.c3d2.de",
+    "email": "mail@c3d2.de"
+  },
+  "location": {
+    "address": "Raum 1.04.01, Haus B, Zentralwerk, Riesaer Str. 32, 01127 Dresden, Germany",
+    "lat": 51.0810791,
+    "lon": 13.7286123
+  },
+  "feeds": {
+    "blog": {
+      "type": "atom",
+      "url": "https://www.c3d2.de/news-atom.xml"
+    },
+    "wiki": {
+      "type": "atom",
+      "url": "https://wiki.c3d2.de/w/index.php?title=Spezial:Letzte_%C3%84nderungen&feed=atom"
+    },
+    "calendar": {
+      "type": "ical",
+      "url": "https://www.c3d2.de/hq.ics"
+    }
+  },
+  "issue_report_channels": [
+    "email",
+    "ml"
+  ],
+  "projects": [
+    "https://datenspuren.de/",
+    "http://www.c3d2.de/radio.html",
+    "http://www.c3d2.de/schule.html"
+  ],
+  "ext_ccc": "erfa"
 }
