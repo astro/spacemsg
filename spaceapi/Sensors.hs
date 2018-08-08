@@ -20,6 +20,8 @@ import Data.Aeson
 import qualified Data.Vector as V
 import Data.Aeson.Types (emptyArray)
 import Data.Scientific (fromFloatDigits)
+import Data.Char (isDigit, isAlpha)
+import Data.List (sortBy)
 import Debug.Trace
 
 import qualified Collectd.Listener as C
@@ -183,6 +185,34 @@ renderSensors sensorsRef = do
                           ]
             cat = fromMaybe [] $
                   category `HM.lookup` obj
-            cat' = item : cat
+            cat' = sortBy cmpItems $
+                   item : cat
         in HM.insert category cat' obj
     ) HM.empty sensors
+
+  where cmpItems (Object item1) (Object item2) =
+          let itemToToken item =
+                let name = do String name <- "name" `HM.lookup` item
+                              return name
+                in maybe []
+                   tokenize name
+              tokens1 = itemToToken item1
+              tokens2 = itemToToken item2
+          in tokens1 `compare` tokens2
+
+data Token = NumberToken Integer
+           | TextToken Text
+           deriving (Show, Eq, Ord)
+
+tokenize :: Text -> [Token]
+tokenize input
+  | T.null input = []
+  | isDigit $ T.head input =
+      let (number, input') = T.span isDigit input
+          n = read $ T.unpack number
+      in NumberToken n : tokenize input'
+  | isAlpha $ T.head input =
+      let (t, input') = T.span isAlpha input
+      in TextToken t : tokenize input'
+  | otherwise =
+      tokenize $ T.tail input
