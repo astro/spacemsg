@@ -1,16 +1,37 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import <nixpkgs> {},
+  spaceapiJson ? ./spaceapi.json,
+  wifiLocationsJson ? ./wifi-locations.json
+}:
 with pkgs;
 
-haskellPackages.mkDerivation {
-  pname = "server";
-  version = "0.0.0";
-  src = ./.;
-  isLibrary = false;
-  isExecutable = true;
-  executableHaskellDepends = with haskellPackages; [
-    aeson base bytestring cereal ekg hashable http-client http-types
-    network old-time scientific stm text unordered-containers vector
-    yesod
-  ];
-  license = stdenv.lib.licenses.agpl3Plus;
-}
+let
+  server =
+    haskellPackages.mkDerivation {
+      pname = "spaceapi-server";
+      version = "0.0.0";
+      src = ./.;
+      isLibrary = false;
+      isExecutable = true;
+      executableHaskellDepends = with haskellPackages; [
+        aeson base bytestring cereal ekg hashable http-client http-types
+        network old-time scientific stm text unordered-containers vector
+        yesod
+      ];
+      license = stdenv.lib.licenses.agpl3Plus;
+    };
+in
+  stdenv.mkDerivation {
+    name = "spaceapi";
+    src = ./.;
+    buildInputs = [ server makeWrapper ];
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p $out/bin $out/share/spaceapi
+
+      makeWrapper ${server}/bin/server $out/bin/spaceapi-server \
+        --run "cd $out/share/spaceapi"
+
+      cp ${spaceapiJson} $out/share/spaceapi/spaceapi.json
+      cp ${wifiLocationsJson} $out/share/spaceapi/wifi-locations.json
+    '';
+  }
