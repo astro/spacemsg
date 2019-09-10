@@ -102,12 +102,16 @@ getStatusIconR = do
 postSensorsEndpointR :: Text -> Handler ()
 postSensorsEndpointR location = do
   withMonitor $ incCounter "postSensorsEndpoint"
-  (Success obj :: Result Value) <- parseJsonBody
-  state <- appSensors <$> getYesod
-  monitorFun <- withMonitor_
-  let monitorFun' name value = monitorFun $ setGauge name value
-  liftIO $ updateSensors location obj state monitorFun'
-  sendResponseStatus status204 ()
+  parsedBody <- parseJsonBody
+  case parsedBody of
+    (Success obj :: Result Value) -> do
+      state <- appSensors <$> getYesod
+      monitorFun <- withMonitor_
+      let monitorFun' name value = monitorFun $ setGauge name value
+      liftIO $ updateSensors location obj state monitorFun'
+      sendResponseStatus status204 ()
+    _ ->
+      sendResponseStatus status204 ()
 
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
