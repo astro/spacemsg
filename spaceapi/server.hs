@@ -71,7 +71,7 @@ getSpaceApiR = do
       obj' = HM.insert "state" stateObj' $
              HM.insert "open" (toJSON open) $
              HM.insert "status" (toJSON message) $
-             HM.insert "sensors" sensorsObj $
+             maybe id (HM.insert "sensors") sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
 

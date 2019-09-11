@@ -153,7 +153,7 @@ handleCollectdSensors sensorsRef wifiLocations datas = do
         trace (show d) $
         updateSensor' category name location value unit
 
-renderSensors :: SensorsRef -> IO Value
+renderSensors :: SensorsRef -> IO (Maybe Value)
 renderSensors sensorsRef = do
   TOD now _ <- getClockTime
 
@@ -174,21 +174,24 @@ renderSensors sensorsRef = do
     putStrLn $ "Deleted " ++ show deleted ++ " sensor values from " ++
     show (map (\(SensorId category name _) -> (category, name)) $ HM.keys sensors)
 
-  return $ Object $
-    HM.map (Array . V.fromList) $
-    HM.foldlWithKey'
-    (\obj (SensorId category name location) (SensorState value unit _) ->
-        let item = object [ ("name", String name)
-                          , ("location", String location)
-                          , ("value", Number $ fromFloatDigits value)
-                          , ("unit", String unit)
-                          ]
-            cat = fromMaybe [] $
-                  category `HM.lookup` obj
-            cat' = sortBy cmpItems $
-                   item : cat
-        in HM.insert category cat' obj
-    ) HM.empty sensors
+  return (if HM.null sensors
+    then Nothing
+    else Just $ Object $
+      HM.map (Array . V.fromList) $
+      HM.foldlWithKey'
+      (\obj (SensorId category name location) (SensorState value unit _) ->
+          let item = object [ ("name", String name)
+                            , ("location", String location)
+                            , ("value", Number $ fromFloatDigits value)
+                            , ("unit", String unit)
+                            ]
+              cat = fromMaybe [] $
+                    category `HM.lookup` obj
+              cat' = sortBy cmpItems $
+                     item : cat
+          in HM.insert category cat' obj
+      ) HM.empty sensors
+    )
 
   where cmpItems (Object item1) (Object item2) =
           let tokenizeField field item =
