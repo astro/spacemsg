@@ -21,5 +21,6 @@ executable         server
                      , network
                      , cereal
                      , ekg
+                     , warp
 
     ghc-options:       -threaded -O2 -Wall -rtsopts -with-rtsopts=-N

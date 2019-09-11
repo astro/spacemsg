@@ -7,7 +7,7 @@
 
 import Data.Maybe
 import Control.Monad (void)
-import Yesod
+import Yesod hiding (warp)
 import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -15,6 +15,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status204, status302, status404)
 import Data.Text (Text)
 import Control.Concurrent (forkIO)
+import qualified Network.Wai.Handler.Warp
 
 import qualified HQSwitch as Sw
 import Sensors
@@ -134,3 +135,11 @@ main = do
          Sw.start <*>
          pure sensorsRef
   warp 3000 app
+
+warp :: YesodDispatch site => Int -> site -> IO ()
+warp port site =
+  let settings = Network.Wai.Handler.Warp.setPort port $
+                 Network.Wai.Handler.Warp.setHost "*6" $
+                 Network.Wai.Handler.Warp.setServerName "SpaceAPI" $
+                 Network.Wai.Handler.Warp.defaultSettings
+  in toWaiApp site >>= Network.Wai.Handler.Warp.runSettings settings

@@ -15,7 +15,7 @@ let
       executableHaskellDepends = with haskellPackages; [
         aeson base bytestring cereal ekg hashable http-client http-types
         network old-time scientific stm text unordered-containers vector
-        yesod
+        yesod warp
       ];
       license = stdenv.lib.licenses.agpl3Plus;
     };
