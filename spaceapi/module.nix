@@ -36,9 +36,10 @@ with lib;
           Restart = "always";
           RestartSec = "10sec";
 
+          AmbientCapabilities = "CAP_NET_BIND_SERVICE";
           DynamicUser = true;
           NoNewPrivileges = true;
-          LimitNPROC = 32;
+          LimitNPROC = 64;
           LimitNOFILE = 256;
           CPUWeight = 5;
           MemoryMax = "512M";
