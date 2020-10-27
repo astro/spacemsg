@@ -39,8 +39,6 @@ with lib;
           AmbientCapabilities = "CAP_NET_BIND_SERVICE";
           DynamicUser = true;
           NoNewPrivileges = true;
-          LimitNPROC = 64;
-          LimitNOFILE = 256;
           CPUWeight = 5;
           MemoryMax = "512M";
           ProtectSystem = "full";
