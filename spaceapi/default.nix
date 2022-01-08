@@ -17,7 +17,7 @@ let
         network old-time scientific stm text unordered-containers vector
         yesod warp
       ];
-      license = stdenv.lib.licenses.agpl3Plus;
+      license = lib.licenses.agpl3Plus;
     };
 in
   stdenv.mkDerivation {
