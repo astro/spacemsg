@@ -17,9 +17,11 @@ fn main() {
     let password = env::var("SCHALTER_PASSWORD").expect("$SCHALTER_PASSWORD");
     let mut router = Router::new();
     let door_state = DoorState::new();
-    router.get("/schalter.json", SchalterHandler::new().chain(), "schalter");
     router.post("/door/unlock", DoorHandler::new_unlock(&door_state, password.clone()).chain(), "unlock");
     router.post("/door/lock", DoorHandler::new_lock(&door_state, password).chain(), "lock");
+    router.post("/schalter.json", SchalterHandler::new().chain(), "schalter");
+    router.get("/schalter.json", SchalterHandler::new().chain(), "schalter");
+    router.post("/door.json", door_state.chain(), "door");
     router.get("/door.json", door_state.chain(), "door");
     Iron::new(router).http("[::]:80").unwrap();
 }
