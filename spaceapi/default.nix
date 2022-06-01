@@ -13,7 +13,7 @@ let
       isLibrary = false;
       isExecutable = true;
       executableHaskellDepends = with haskellPackages; [
-        aeson base bytestring cereal ekg hashable http-client http-types
+        aeson base bytestring cereal hashable http-client http-types
         network old-time scientific stm text unordered-containers vector
         yesod warp
       ];

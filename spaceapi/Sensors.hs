@@ -13,6 +13,8 @@ import Data.Hashable (Hashable)
 import Control.Monad (when, forM_)
 import Control.Concurrent.STM
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Aeson.Key as K
+import qualified Data.Aeson.KeyMap as KM
 import Data.Text (Text)
 import qualified Data.Text as T
 import System.Time
@@ -46,7 +48,7 @@ data SensorState = SensorState {
   sTime :: Integer
 }
 
-type WifiLocations = HM.HashMap Text Text
+type WifiLocations = KM.KeyMap Text
 
 sensorTimeout :: Integer
 sensorTimeout = 300
@@ -60,22 +62,22 @@ updateSensor sensorsRef now category name location value unit = do
   modifyTVar' sensorsRef $
     HM.insert k $ SensorState value unit now
 
-updateSensors :: Text -> Value -> SensorsRef -> (Text -> Double -> IO ()) -> IO ()
-updateSensors location (Object obj) sensorsRef monitorFun = do
+updateSensors :: Text -> Value -> SensorsRef -> IO ()
+updateSensors location (Object obj) sensorsRef = do
   TOD now _ <- getClockTime
 
   let Array values = fromMaybe emptyArray $
-                     "sensordatavalues" `HM.lookup` obj
+                     "sensordatavalues" `KM.lookup` obj
 
       getValue :: Text -> Maybe Value
       getValue k = do
         (Object item) <- V.find
           (\(Object item) ->
-              case "value_type" `HM.lookup` item of
+              case "value_type" `KM.lookup` item of
                 Just k' | String k == k' -> True
                 _ -> False
           ) values
-        "value" `HM.lookup` item
+        "value" `KM.lookup` item
 
       parseDouble :: Value -> Maybe Double
       parseDouble (String t) =
@@ -83,13 +85,6 @@ updateSensors location (Object obj) sensorsRef monitorFun = do
       parseDouble _ = Nothing
 
       updateSensor' = updateSensor sensorsRef now
-
-      monitor name value = do
-        let logName = T.concat [ location
-                               , "-"
-                               , name
-                               ]
-        monitorFun logName value
 
   -- Handle SDS011 readings
   case ( getValue "SDS_P1" >>= parseDouble
@@ -99,8 +94,6 @@ updateSensors location (Object obj) sensorsRef monitorFun = do
       atomically $ do
         updateSensor' "dust" "PM2.5" location pm2 "µg/m³"
         updateSensor' "dust" "PM10" location pm10 "µg/m³"
-      monitor "pm2" pm2
-      monitor "pm10" pm10
     _ ->
       return ()
 
@@ -109,7 +102,6 @@ updateSensors location (Object obj) sensorsRef monitorFun = do
     Just temperature -> do
       atomically $
         updateSensor' "temperature" "DHT22" location temperature "°C"
-      monitor "temperature" temperature
     Nothing ->
       return ()
 
@@ -117,20 +109,19 @@ updateSensors location (Object obj) sensorsRef monitorFun = do
     Just humidity -> do
       atomically $
         updateSensor' "humidity" "DHT22" location humidity "%"
-      monitor "humidity" humidity
     Nothing ->
       return ()
 
-updateSensors _ _ _ _ = return ()
+updateSensors _ _ _ = return ()
 
 interestingData :: C.Datum -> WifiLocations -> Maybe (Text, Text, Text, Double, Text)
 interestingData d wifiLocations
 
-  | (dHost `elem` allowedHosts) && dPlugin == "iwinfo" && dType == "stations" =
+  | (K.fromText dHost `elem` allowedHosts) && dPlugin == "iwinfo" && dType == "stations" =
       case C.datumValues d of
         [C.Gauge value] ->
           let name = T.concat [dHost, " ", dPluginInstance]
-          in Just ("network_connections", name, fromMaybe "" $ dHost `HM.lookup` wifiLocations, value, "stations")
+          in Just ("network_connections", name, fromMaybe "" $ K.fromText dHost `KM.lookup` wifiLocations, value, "stations")
         _ ->
           Nothing
   -- | (dHost == "upstream1" && dPluginInstance == "up1" || dHost == "anon1" && dPluginInstance == "ipredator") && dPlugin == "interface" && dType == "if_octets" =
@@ -138,7 +129,7 @@ interestingData d wifiLocations
   --       [C.Derive rx, C.Derive tx] ->
   | otherwise = Nothing
   where (dHost, dPlugin, dPluginInstance, dType, _dTypeInstance) = C.datumPath d
-        allowedHosts = HM.keys wifiLocations
+        allowedHosts = KM.keys wifiLocations
 
 handleCollectdSensors :: SensorsRef -> WifiLocations -> [C.Datum] -> IO ()
 handleCollectdSensors sensorsRef wifiLocations datas = do
@@ -177,8 +168,9 @@ renderSensors sensorsRef = do
   return (if HM.null sensors
     then Nothing
     else Just $ Object $
+      KM.fromHashMap $
       HM.map (Array . V.fromList) $
-      HM.foldlWithKey'
+      HM.foldlWithKey
       (\obj (SensorId category name location) (SensorState value unit _) ->
           let item = object [ ("name", String name)
                             , ("location", String location)
@@ -186,16 +178,16 @@ renderSensors sensorsRef = do
                             , ("unit", String unit)
                             ]
               cat = fromMaybe [] $
-                    category `HM.lookup` obj
+                    K.fromText category `HM.lookup` obj
               cat' = sortBy cmpItems $
                      item : cat
-          in HM.insert category cat' obj
+          in HM.insert (K.fromText category) cat' obj
       ) HM.empty sensors
     )
 
   where cmpItems (Object item1) (Object item2) =
           let tokenizeField field item =
-                case field `HM.lookup` item of
+                case field `KM.lookup` item of
                   Just (String s) -> tokenize s
                   _ -> []
               compareFields field =

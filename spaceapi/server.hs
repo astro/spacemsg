@@ -10,7 +10,7 @@ import Control.Monad (void)
 import Yesod hiding (warp)
 import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
-import qualified Data.HashMap.Strict as HM
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import Network.HTTP.Types.Status (status204, status302, status404)
 import Data.Text (Text)
@@ -20,10 +20,8 @@ import qualified Network.Wai.Handler.Warp
 import qualified HQSwitch as Sw
 import Sensors
 import Collectd.Listener (runListener)
-import EKG
 
 data App = App {
-      appMonitor :: Monitor,
       appJSON :: Object,
       appSwitch :: IO Sw.Status,
       appSensors :: SensorsRef
@@ -38,19 +36,8 @@ mkYesod "App" [parseRoutes|
 instance Yesod App where
     makeSessionBackend _ = return Nothing
 
-withMonitor_ :: Handler ((Monitor -> IO a) -> IO a)
-withMonitor_ = do
-  monitor <- appMonitor <$> getYesod
-  return $ \f -> f monitor
-
-withMonitor :: (Monitor -> IO a) -> Handler a
-withMonitor f =
-  (appMonitor <$> getYesod) >>= liftIO . f
-
 getSpaceApiR :: Handler RepJson
 getSpaceApiR = do
-  withMonitor $ incCounter "getSpaceApi"
-
   addHeader "Access-Control-Allow-Origin" "*"
 
   App { appJSON = obj, appSwitch = sw, appSensors = sensorsRef } <- getYesod
@@ -58,7 +45,7 @@ getSpaceApiR = do
   sensorsObj <- liftIO $ renderSensors sensorsRef
   let stateObj =
           fromMaybe [] $
-          HM.lookup "state" obj >>=
+          KM.lookup "state" obj >>=
           parseMaybe parseJSON
       open = Sw.isOpen swSt
       message = Sw.stMessage swSt
@@ -68,17 +55,15 @@ getSpaceApiR = do
             "message" .= message,
             "lastchange" .= Sw.stLastChange swSt
           ] ++ stateObj
-      obj' = HM.insert "state" stateObj' $
-             HM.insert "open" (toJSON open) $
-             HM.insert "status" (toJSON message) $
-             maybe id (HM.insert "sensors") sensorsObj $
+      obj' = KM.insert "state" stateObj' $
+             KM.insert "open" (toJSON open) $
+             KM.insert "status" (toJSON message) $
+             maybe id (KM.insert "sensors") sensorsObj $
              obj
   return $ RepJson $ toContent $ Object obj'
 
 getStatusIconR :: Handler ()
 getStatusIconR = do
-  withMonitor $ incCounter "getStatusIcon"
-
   App { appJSON = obj, appSwitch = sw } <- getYesod
   swSt <- liftIO sw
   let state = Sw.stState swSt
@@ -102,14 +87,11 @@ getStatusIconR = do
 
 postSensorsEndpointR :: Text -> Handler ()
 postSensorsEndpointR location = do
-  withMonitor $ incCounter "postSensorsEndpoint"
   parsedBody <- parseJsonBody
   case parsedBody of
     (Success obj :: Result Value) -> do
       state <- appSensors <$> getYesod
-      monitorFun <- withMonitor_
-      let monitorFun' name value = monitorFun $ setGauge name value
-      liftIO $ updateSensors location obj state monitorFun'
+      liftIO $ updateSensors location obj state
       sendResponseStatus status204 ()
     _ ->
       sendResponseStatus status204 ()
@@ -117,7 +99,6 @@ postSensorsEndpointR location = do
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
 main = do
-  ekg <- startMonitor 3001
   sensorsRef <- newSensors
   let loadJson :: FromJSON a => String -> IO a
       loadJson filename =
@@ -131,7 +112,7 @@ main = do
     runListener "::" "25826" $ handleCollectdSensors sensorsRef wifiLocations
 
   spaceapiJson <- loadJson "spaceapi.json"
-  app <- App ekg spaceapiJson <$>
+  app <- App spaceapiJson <$>
          Sw.start <*>
          pure sensorsRef
   warp 3000 app
