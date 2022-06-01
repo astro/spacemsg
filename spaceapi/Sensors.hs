@@ -124,10 +124,10 @@ interestingData d wifiLocations
           in Just ("network_connections", name, fromMaybe "" $ K.fromText dHost `KM.lookup` wifiLocations, value, "stations")
         _ ->
           Nothing
-  | dPlugin == "exec" && dPluginInstance == "dhcpd" && dType == "current_sessions" =
+  | "c3d2-" `T.isPrefixOf` dHost && dPlugin == "exec" && dPluginInstance == "dhcpd" && dType == "current_sessions" =
       case C.datumValues d of
         [C.Gauge value] ->
-          Just ("network_connections", dHost, "DHCP", value, "leases")
+          Just ("network_connections", "dhcp", dHost, value, "leases")
   -- | (dHost == "upstream1" && dPluginInstance == "up1" || dHost == "anon1" && dPluginInstance == "ipredator") && dPlugin == "interface" && dType == "if_octets" =
   --     case C.datumValues d of
   --       [C.Derive rx, C.Derive tx] ->
