@@ -12,7 +12,7 @@ import Data.Aeson
 import Data.Aeson.Types (parseMaybe)
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy.Char8 as LBC
-import Network.HTTP.Types.Status (status204, status302, status404)
+import Network.HTTP.Types.Status (status204, status302, status400, status404)
 import Data.Text (Text)
 import Control.Concurrent (forkIO)
 import qualified Network.Wai.Handler.Warp
@@ -94,7 +94,7 @@ postSensorsEndpointR location = do
       liftIO $ updateSensors location obj state
       sendResponseStatus status204 ()
     _ ->
-      sendResponseStatus status204 ()
+      sendResponseStatus status400 ()
 
 -- TODO: toWaiApp(Plain) + CORS middleware
 main :: IO ()
