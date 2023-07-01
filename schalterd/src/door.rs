@@ -93,11 +93,11 @@ impl DoorHandler {
     fn activate(&self) -> Result<(), Error> {
         let mut state = self.state.state.write().unwrap();
 
-        try!(self.gpio.set_value(1));
+        self.gpio.set_value(1)?;
         // 20ms between 1, 0
         sleep(Duration::from_millis(20));
 
-        try!(self.gpio.set_value(0));
+        self.gpio.set_value(0)?;
         // hold 0 to forbid a long 1 with consecutive requests
         // TODO: locking?
         sleep(Duration::from_millis(20));
