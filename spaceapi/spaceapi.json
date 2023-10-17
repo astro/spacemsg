@@ -18,7 +18,8 @@
   },
   "url": "https://www.c3d2.de/",
   "contact": {
-    "twitter": "@pentafnord",
+    "mastodon": "@c3d2@c3d2.social",
+    "matrix": "#c3d2:c3d2.de",
     "ml": "c3d2@lists.c3d2.de",
     "jabber": "c3d2@chat.c3d2.de",
     "email": "mail@c3d2.de"
