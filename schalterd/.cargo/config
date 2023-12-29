@@ -1,5 +1,5 @@
-[target.arm-unknown-linux-gnueabi]
-linker = "arm-linux-gnueabi-gcc"
+[target.arm-unknown-linux-musleabi]
+linker = "armv6l-unknown-linux-musleabi-gcc"
 
 [alias]
-cross = "build --target=arm-unknown-linux-gnueabi --release"
+cross = "build --target=arm-unknown-linux-musleabi --release"
