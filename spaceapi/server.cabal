@@ -5,6 +5,10 @@ build-type:        Simple
 
 executable         server
     main-is:           server.hs
+    other-modules:     Collectd.Listener
+                     , Collectd.Packet
+                     , HQSwitch
+                     , Sensors
     build-depends:     base
                      , yesod
                      , bytestring

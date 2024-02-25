@@ -3,7 +3,7 @@ module Collectd.Listener where
 import Control.Monad
 import Data.Word
 import Data.Text (Text)
-import Network.Socket hiding (send, sendTo, recv, recvFrom, Type)
+import Network.Socket hiding (Type)
 import Network.Socket.ByteString
 
 import Collectd.Packet
@@ -22,7 +22,7 @@ runListener host port handler = do
     case ePackets of
       Left e -> putStrLn $ "Collectd recv from " ++ show pktAddr ++ " error: " ++ e
       Right packets -> handler $ packetsToData packets
-    
+
 
 -- | (host, plugin, pluginInstance, type, typeInstance)
 type DatumPath = (Text, Text, Text, Text, Text)
@@ -47,7 +47,7 @@ packetsToData = fst .
            Host host ->
             (result, (dTime, dInterval, (Just host, dPlugin, dPluginInstance, dType, dTypeInstance)))
            Time time ->
-            (result, (Just time, dInterval, dPath)) 
+            (result, (Just time, dInterval, dPath))
            Interval interval ->
             (result, (dTime, Just interval, dPath))
            Plugin plugin ->
@@ -73,4 +73,4 @@ packetsToData = fst .
                       pure values
              return (result ++ [datum], d)
            _ ->
-            (result, (dTime, dInterval, dPath)) 
+            (result, (dTime, dInterval, dPath))
