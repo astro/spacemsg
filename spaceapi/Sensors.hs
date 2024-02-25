@@ -25,6 +25,7 @@ import Data.Scientific (fromFloatDigits)
 import Data.Char (isDigit, isAlpha)
 import Data.List (sortBy)
 import Debug.Trace
+import Text.Read (readMaybe)
 
 import qualified Collectd.Listener as C
 import qualified Collectd.Packet as C
@@ -81,7 +82,7 @@ updateSensors location (Object obj) sensorsRef = do
 
       parseDouble :: Value -> Maybe Double
       parseDouble (String t) =
-        Just $ read $ T.unpack t
+        readMaybe (T.unpack t)
       parseDouble _ = Nothing
 
       updateSensor' = updateSensor sensorsRef now
