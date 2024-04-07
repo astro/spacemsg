@@ -116,7 +116,7 @@ updateSensors location (Object obj) sensorsRef = do
   case getValue "barometer" >>= parseDouble of
     Just pressure -> do
       atomically $
-        updateSensor' "barometer" "esphome" location pressure "hPa"
+        updateSensor' "barometer" "esphome" location pressure "hPA"
     Nothing ->
       return ()
 
